@@ -28,25 +28,26 @@ def numeric_compare(x, y):
 def print_colored((string, code)):
     sys.stdout.write('[' + code + string + bcolors.ENDC + ']')
 
-def proceed_test_res(res):
-    sets = []
-    index = 0
-    current = res[0]
-    for i in range(len(res)):
-        if not res[i][1] == current[1]: 
-            sets.append((index, i - 1, current))
-            current = res[i]
-            index = i
+from enum import Enum
+class type(Enum):
+    wa = 0
+    ok = 1
+    tl = 2
 
-    sets.append((index, i, current))
+class test_result():
 
-    for s in sets:
-        print_colored(s[2][1:])
+    def __init__(self, t, i, out=""):
+        self.t = t
+        self.index = i
+        self.out = out
 
-        if s[1] - s[0] == 0:
-            print ' Test #' + str(s[0] + 1)
-        else:
-            print ' Tests #' + str(s[0] + 1) + '..' + str(s[1] + 1)
+    def getDescription(self):
+        if self.t == type.wa:
+            return ('FAILED', bcolors.FAIL)
+        elif self.t == type.ok:
+            return ('PASSED', bcolors.OKGREEN)
+        elif self.t == type.tl:
+            return ('TIME LIMIT', bcolors.WARNING)
 
 def test_target(args):
     target = args[0]
@@ -54,28 +55,50 @@ def test_target(args):
     i = args[2]
     test = args[3] 
     answer = args[4]
-    
-    try:
-        timeout = args[5]
-    except:
-        timeout = 1
-
+    try: timeout = args[5]
+    except: timeout = 1
     instance = Popen(target, stdin=PIPE, stdout=PIPE, bufsize=1)
     instance.stdin.write(test)
-
     signal.signal(signal.SIGALRM, _handle_timeout) 
     signal.alarm(timeout) 
     try: 
         instance_answer = instance.stdout.read() 
         if instance_answer == answer: 
-            results.put((i, "PASSED", bcolors.OKGREEN)) 
+            results.put(test_result(type.ok, i)) 
         else: 
-            results.put((i, "FAILED", bcolors.FAIL)) 
+            results.put(test_result(type.wa, i, out=instance_answer)) 
     except ValueError: 
-        results.put((i, "TIME LIMIT", bcolors.WARNING)) 
+        results.put(test_result(type.tl, i)) 
         instance.kill()
-    finally: 
-        signal.alarm(0)
+    finally: signal.alarm(0)
+
+def proceed_test_res(res):
+    sets = []
+    index = 0
+    current = res[0]
+    for i in range(len(res)):
+        if not res[i].t == current.t: 
+            sets.append((index, i - 1, current))
+            current = res[i]
+            index = i
+    sets.append((index, i, current))
+    for s in sets:
+        print_colored(s[2].getDescription())
+        if s[1] - s[0] == 0:
+            print ' Test #' + str(s[0] + 1)
+        else:
+            print ' Tests #' + str(s[0] + 1) + '..' + str(s[1] + 1)
+
+def getData(dirname):
+    files = [join(dirname, f) for f in listdir(dirname) if isfile(join(dirname, f))]
+    tests = [f for f in files if f.split('/')[-1][0] == 't']
+    tests = sorted(tests, cmp=numeric_compare)
+    answers = [f for f in files if f.split('/')[-1][0] == 'a']
+    answers = sorted(answers, cmp=numeric_compare)
+    if not len(answers) == len(tests):
+        print 'Hmm...Test directory is not okay'
+        sys.exit(0)
+    return (tests, answers)
 
 def main():
 
@@ -83,41 +106,26 @@ def main():
         print 'test test_file directory'
 
     dirname = sys.argv[2]
-
-    files = [join(dirname, f) for f in listdir(dirname) if isfile(join(dirname, f))]
-    
-    tests = [f for f in files if f.split('/')[-1][0] == 't']
-    tests = sorted(tests, cmp=numeric_compare)
-    
-    answers = [f for f in files if f.split('/')[-1][0] == 'a']
-    answers = sorted(answers, cmp=numeric_compare)
-
-    if not len(answers) == len(tests):
-        print 'Hmm...Test directory is not okay'
-        sys.exit(0)
-
     target = sys.argv[1]
+    tests, answers = getData(dirname)
 
     manager = Manager()
     q = manager.Queue()
 
-    args = []
-
-    for f in tests:
-
-        test = open(f).read()
-        index = tests.index(f)
-        answer = open(answers[index]).read()
-        args.append((target, q, index, test, answer)) 
+    args = [(target, \
+             q, \
+             tests.index(f) ,\
+             open(f).read(), \
+             open(answers[tests.index(f)]).read()) \
+             for f in tests] 
 
     p = Pool(len(tests))
     p.map(test_target, args)
 
-
     res = [i for i in range(q.qsize())]
     while not q.empty():
         r = q.get()
-        res[r[0]] = r
+        res[r.index] = r
 
     proceed_test_res(res)
 
