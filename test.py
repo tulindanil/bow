@@ -17,8 +17,11 @@ class bcolors:
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
 
+class TimeError(Exception):
+    pass
+
 def _handle_timeout(*args):
-    raise ValueError 
+    raise Exception 
 
 def numeric_compare(x, y):
     x = re.findall('\d+', x)
@@ -49,6 +52,12 @@ class test_result():
         elif self.t == type.tl:
             return ('TIME LIMIT', bcolors.WARNING)
 
+def proceed_ans(q, instance_ans, ans, i):
+    if instance_ans == ans: 
+        q.put(test_result(type.ok, i)) 
+    else: 
+        q.put(test_result(type.wa, i, out=instance_ans)) 
+
 def test_target(args):
     target = args[0]
     results = args[1] 
@@ -62,12 +71,9 @@ def test_target(args):
     signal.signal(signal.SIGALRM, _handle_timeout) 
     signal.alarm(timeout) 
     try: 
-        instance_answer = instance.stdout.read() 
-        if instance_answer == answer: 
-            results.put(test_result(type.ok, i)) 
-        else: 
-            results.put(test_result(type.wa, i, out=instance_answer)) 
-    except ValueError: 
+        instance_ans = instance.stdout.read() 
+        proceed_ans(results, instance_ans, answer, i)
+    except: 
         results.put(test_result(type.tl, i)) 
         instance.kill()
     finally: signal.alarm(0)
