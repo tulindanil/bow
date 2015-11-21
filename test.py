@@ -4,8 +4,76 @@ import signal
 from time import sleep
 import sys
 import re
+import os
 from os import listdir
 from os.path import isfile, join
+from enum import Enum
+
+py_switches = ['py']
+c_switches = ['cpp', 'cc', 'hpp', 'h', 'hxx', 'cxx', 'c']
+
+class prj_type(Enum):
+    c_type = 0
+    py_type = 1
+
+class config:
+
+    @staticmethod
+    def target():
+        if config.t == prj_type.py_type: 
+            return [sys.executable, config.executable]
+        else:
+            return './' + config.executable
+
+def definePyMainFile(files):
+    for e in files:
+        f = open(e)
+        if re.search('__name__', f.read()):
+            return e
+        
+def defineCMainFile(files):
+    for e in files:
+       f = open(e)
+       if re.search('main(*)', f.read()):
+           return e
+
+def defineProjectType():
+    names = listdir('./');
+    py = []
+    c = []
+    for name in names:
+        s = name.split('.')
+        e = ''
+        try: e = s[-1]
+        except: continue
+        if e in py_switches: 
+            py.append(name)
+        elif e in c_switches:
+            c.append(name)
+    if len(c) > 0 and len(py) > 0:
+        print 'Can\'t determinate your project\'s language'
+        sys.exit(1)
+    if len(c) == 0 and len(py) == 0:
+        print 'Nothing to test'
+        sys.exit(1)
+    if len(py) > 0:
+        config.t = prj_type.py_type
+        config.executable = definePyMainFile(py)
+    elif len(c) > 0:
+        config.t = prj_type.c_type
+        config.executable = defineCMainFile(c)
+
+def getData(dirname):
+    files = [join(dirname, f) for f in listdir(dirname) if isfile(join(dirname, f))]
+    tests = [f for f in files if f.split('/')[-1][0] == 't']
+    tests = sorted(tests, cmp=numeric_compare)
+    answers = [f for f in files if f.split('/')[-1][0] == 'a']
+    answers = sorted(answers, cmp=numeric_compare)
+    if not len(answers) == len(tests):
+        print 'Hmm...Test directory is not okay'
+        sys.exit(0)
+    return (tests, answers)
+
 
 class bcolors:
     HEADER = '\033[95m'
@@ -31,7 +99,6 @@ def numeric_compare(x, y):
 def print_colored((string, code)):
     sys.stdout.write('[' + code + string + bcolors.ENDC + ']')
 
-from enum import Enum
 class type(Enum):
     wa = 0
     ok = 1
@@ -95,30 +162,23 @@ def proceed_test_res(res):
         else:
             print ' Tests #' + str(s[0] + 1) + '..' + str(s[1] + 1)
 
-def getData(dirname):
-    files = [join(dirname, f) for f in listdir(dirname) if isfile(join(dirname, f))]
-    tests = [f for f in files if f.split('/')[-1][0] == 't']
-    tests = sorted(tests, cmp=numeric_compare)
-    answers = [f for f in files if f.split('/')[-1][0] == 'a']
-    answers = sorted(answers, cmp=numeric_compare)
-    if not len(answers) == len(tests):
-        print 'Hmm...Test directory is not okay'
-        sys.exit(0)
-    return (tests, answers)
-
 def main():
 
-    if len(sys.argv) < 3:
-        print 'test test_file directory'
+    defineProjectType()
 
-    dirname = sys.argv[2]
-    target = sys.argv[1]
-    tests, answers = getData(dirname)
+    tests, answers = getData('tests')
 
     manager = Manager()
     q = manager.Queue()
 
-    args = [(target, \
+    if len(sys.argv) > 2 and (sys.argv[1] == '-t' or sys.argv[1] == '--test'):
+        try: 
+            tests = [tests[int(sys.argv[2]) - 1]]
+        except: 
+            print 'Wrong argument'
+            sys.exit(1)
+
+    args = [(config.target(), \
              q, \
              tests.index(f) ,\
              open(f).read(), \
@@ -135,8 +195,8 @@ def main():
 
     proceed_test_res(res)
 
-if __name__ == '__main__':
-    try:
-        main()
-    except Exception as e:
-        print e
+#if __name__ == '__main__':
+#try:
+main()
+#except Exception as e:
+    #print e
