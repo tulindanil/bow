@@ -23,13 +23,10 @@ class config:
     def compile():
         if not os.system('make judje -s -i') == 0:
             print 'no makefile provided'
-
-            mainfile = defineCMainFile(listdir('./'))
-            if os.system('g++ -O2 -o test ' + mainfile):
+            if os.system('g++ -O2 -o test ' + config.cxx_t):
                 print 'specify appropriate makefile with target judje'
                 sys.exit(1)
-
-            print 'compiled ' + mainfile
+            print 'compiled ' + config.cxx_t
 
         if not 'test' in listdir('./'):
             print 'specify \'test\' output file in makefile\'s target judje'
@@ -89,7 +86,7 @@ def defineProjectType():
         config.executable = definePyMainFile(py)
     elif len(c) > 0:
         config.t = prj_type.c_type
-        config.executable = defineCMainFile(c)
+        config.cxx_t = defineCMainFile(c)
 
 def getData(dirname):
     files = [join(dirname, f) for f in listdir(dirname) if isfile(join(dirname, f))]
@@ -237,7 +234,4 @@ def main():
     config.clean()
 
 if __name__ == '__main__':
-    try:
-        main()
-    except Exception as e:
-        print e
+    main()
