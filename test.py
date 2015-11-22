@@ -1,4 +1,5 @@
 from subprocess import PIPE, Popen
+import StringIO
 from multiprocessing import Pool, Manager
 import signal
 from time import sleep
@@ -19,22 +20,42 @@ class prj_type(Enum):
 class config:
 
     @staticmethod
+    def compile():
+        if not os.system('make judje -s') == 0:
+            print 'specify appropriate makefile with target judje'
+            sys.exit(1)
+
+        if not 'test' in listdir('./'):
+            print 'specify \'test\' output file in makefile\'s target judje'
+
+        config.executable = 'test'
+        config.compiled = True
+
+    compiled = False
+
+    @staticmethod
+    def clean():
+        if config.compiled:
+            os.remove(config.executable)
+
+    @staticmethod
     def target():
         if config.t == prj_type.py_type: 
             return [sys.executable, config.executable]
         else:
+            if config.compiled == False: config.compile()
             return './' + config.executable
 
 def definePyMainFile(files):
     for e in files:
         f = open(e)
-        if re.search('__name__', f.read()):
+        if re.search('__name__ == \'__main__\'', f.read()):
             return e
         
 def defineCMainFile(files):
     for e in files:
        f = open(e)
-       if re.search('main(*)', f.read()):
+       if re.search(' main\(', f.read()):
            return e
 
 def defineProjectType():
@@ -119,8 +140,18 @@ class test_result():
         elif self.t == type.tl:
             return ('TIME LIMIT', bcolors.WARNING)
 
-def proceed_ans(q, instance_ans, ans, i):
-    if instance_ans == ans: 
+def proceed_ans(q, instance_ans, reference, i):
+
+    instance_ans = instance_ans.replace('\n', '')
+    reference = reference.replace('\n', '')
+
+    refIO = StringIO.StringIO(reference)
+    ansIO = StringIO.StringIO(instance_ans)
+
+    ref = refIO.read()
+    ans = ansIO.read()
+
+    if ref == ans: 
         q.put(test_result(type.ok, i)) 
     else: 
         q.put(test_result(type.wa, i, out=instance_ans)) 
@@ -132,18 +163,19 @@ def test_target(args):
     test = args[3] 
     answer = args[4]
     try: timeout = args[5]
-    except: timeout = 1
+    except: timeout = 10
     instance = Popen(target, stdin=PIPE, stdout=PIPE, bufsize=1)
-    instance.stdin.write(test)
     signal.signal(signal.SIGALRM, _handle_timeout) 
     signal.alarm(timeout) 
     try: 
-        instance_ans = instance.stdout.read() 
+        instance_ans, instance_err = instance.communicate(test) 
         proceed_ans(results, instance_ans, answer, i)
-    except: 
+    except Exception as e: 
         results.put(test_result(type.tl, i)) 
-        instance.kill()
-    finally: signal.alarm(0)
+        try: instance.kill()
+        except: print e
+    finally: 
+        signal.alarm(0)
 
 def proceed_test_res(res):
     sets = []
@@ -164,18 +196,19 @@ def proceed_test_res(res):
 
 def main():
 
+    config.files = listdir('./')
     defineProjectType()
 
     tests, answers = getData('tests')
-
     manager = Manager()
     q = manager.Queue()
 
     if len(sys.argv) > 2 and (sys.argv[1] == '-t' or sys.argv[1] == '--test'):
         try: 
             tests = [tests[int(sys.argv[2]) - 1]]
+            answers = [answers[int(sys.argv[2]) - 1]]
         except: 
-            print 'Wrong argument'
+            print 'Index is out of bounce'
             sys.exit(1)
 
     args = [(config.target(), \
@@ -194,9 +227,10 @@ def main():
         res[r.index] = r
 
     proceed_test_res(res)
+    config.clean()
 
-#if __name__ == '__main__':
-#try:
-main()
-#except Exception as e:
-    #print e
+if __name__ == '__main__':
+    try:
+        main()
+    except Exception as e:
+        print e
