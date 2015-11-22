@@ -21,12 +21,19 @@ class config:
 
     @staticmethod
     def compile():
-        if not os.system('make judje -s') == 0:
-            print 'specify appropriate makefile with target judje'
-            sys.exit(1)
+        if not os.system('make judje -s -i') == 0:
+            print 'no makefile provided'
+
+            mainfile = defineCMainFile(listdir('./'))
+            if os.system('g++ -O2 -o test ' + mainfile):
+                print 'specify appropriate makefile with target judje'
+                sys.exit(1)
+
+            print 'compiled ' + mainfile
 
         if not 'test' in listdir('./'):
             print 'specify \'test\' output file in makefile\'s target judje'
+            sys.exit(1)
 
         config.executable = 'test'
         config.compiled = True
