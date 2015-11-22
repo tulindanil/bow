@@ -163,7 +163,7 @@ def test_target(args):
     test = args[3] 
     answer = args[4]
     try: timeout = args[5]
-    except: timeout = 10
+    except: timeout = 1
     instance = Popen(target, stdin=PIPE, stdout=PIPE, bufsize=1)
     signal.signal(signal.SIGALRM, _handle_timeout) 
     signal.alarm(timeout) 
