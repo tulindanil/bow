@@ -1,5 +1,9 @@
 for i in range(100):
     t = open('t' + str(i) + '.test', 'w')
-    t.write(str(i))
     a = open('a' + str(i) + '.test', 'w')
-    a.write(str(i))
+
+    if i % 25 == 0:
+        a.write(str(1))
+    else:
+        a.write(str(i))
+    t.write(str(i))
