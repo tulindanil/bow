@@ -144,14 +144,18 @@ class test_result():
         elif self.t == type.tl:
             return ('TIME LIMIT', bcolors.WARNING)
 
+def getInstances(string):
+    string = string.replace('\n', ' ')
+    raw = string.split()
+    instances = [] 
+    for obj in raw:
+        index = raw.index(obj)
+        try: instances.append(float(obj))
+        except Exception as e: 
+            instances.append(obj)
+
 def proceed_ans(q, instance_ans, reference, i):
-    instance_ans = instance_ans.replace('\n', '')
-    reference = reference.replace('\n', '')
-    refIO = StringIO.StringIO(reference)
-    ansIO = StringIO.StringIO(instance_ans)
-    ref = refIO.read()
-    ans = ansIO.read()
-    if ref == ans: 
+    if getInstances(instance_ans) == getInstances(reference): 
         q.put(test_result(type.ok, i)) 
     else: 
         q.put(test_result(type.wa, i, out=instance_ans)) 
