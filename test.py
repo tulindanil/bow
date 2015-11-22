@@ -200,7 +200,6 @@ def proceed_test_res(res):
 
 def main():
 
-    config.files = listdir('./')
     defineProjectType()
 
     tests, answers = getData('tests')
