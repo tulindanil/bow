@@ -12,6 +12,7 @@ from enum import Enum
 
 py_switches = ['py']
 c_switches = ['cpp', 'cc', 'hpp', 'h', 'hxx', 'cxx', 'c']
+judje_name = 'judje.cc'
 
 class prj_type(Enum):
     c_type = 0
@@ -21,11 +22,11 @@ class config:
 
     @staticmethod
     def compile():
-        if not os.system('make judje -s -i') == 0:
+        if not os.system('make test -s -i') == 0:
             print 'no makefile provided'
-            if os.system('g++ -O2 -o test ' + config.cxx_t):
+            if os.system('g++ -O2 -o test ' + config.cxx_mainfile):
                 sys.exit(1)
-            print 'compiled ' + config.cxx_t
+            print 'compiled ' + config.cxx_mainfile
 
         if not 'test' in listdir('./'):
             print 'specify \'test\' output file in makefile\'s target judje'
@@ -57,6 +58,7 @@ def definePyMainFile(files):
         
 def defineCMainFile(files):
     for e in files:
+       if e == judje_name: continue
        f = open(e)
        if re.search(' main\(', f.read()):
            return e
@@ -85,7 +87,7 @@ def defineProjectType():
         config.executable = definePyMainFile(py)
     elif len(c) > 0:
         config.t = prj_type.c_type
-        config.cxx_t = defineCMainFile(c)
+        config.cxx_mainfile = defineCMainFile(c)
 
 def getData(dirname):
     files = [join(dirname, f) for f in listdir(dirname) if isfile(join(dirname, f))]
@@ -143,20 +145,23 @@ class test_result():
             return ('TIME LIMIT', bcolors.WARNING)
 
 def proceed_ans(q, instance_ans, reference, i):
-
     instance_ans = instance_ans.replace('\n', '')
     reference = reference.replace('\n', '')
-
     refIO = StringIO.StringIO(reference)
     ansIO = StringIO.StringIO(instance_ans)
-
     ref = refIO.read()
     ans = ansIO.read()
-
     if ref == ans: 
         q.put(test_result(type.ok, i)) 
     else: 
         q.put(test_result(type.wa, i, out=instance_ans)) 
+
+class Judjement:
+
+    def overall(self):
+        return self.was + self.tls + self.oks
+
+judje = Judjement()
 
 def test_target(args):
     target = config.target()
@@ -182,6 +187,11 @@ def proceed_test_res(res):
     sets = []
     index = 0
     current = res[0]
+    
+    judje.was = len([r for r in res if r.t == type.wa])
+    judje.oks = len([r for r in res if r.t == type.ok])
+    judje.tls = len([r for r in res if r.t == type.tl])
+
     for i in range(len(res)):
         if not res[i].t == current.t: 
             sets.append((index, i - 1, current))
@@ -195,7 +205,26 @@ def proceed_test_res(res):
         else:
             print ' Tests #' + str(s[0] + 1) + '..' + str(s[1] + 1)
 
+def proceedDependecies(f, j_f):
+    for line in f:
+        if len(re.findall('#include "', line)) > 0:
+            dependecy = line.split('"')[1]
+            proceedDependecies(open(dependecy), j_f)
+        else: j_f.write(line)
+
+def collect():
+    try: main_f = open(config.cxx_mainfile)
+    except: 
+        print 'unable to open main file'
+        sys.exit(1)
+    j_f = open('judje.cc', 'w')
+    proceedDependecies(main_f, j_f)
+
 def main():
+
+    if isfile(judje_name):
+        print 'deleting your old ' + judje_name
+        os.remove(judje_name)
 
     defineProjectType()
 
@@ -228,6 +257,10 @@ def main():
 
     proceed_test_res(res)
     config.clean()
+
+    if judje.overall() == judje.oks: 
+        collect()
+        print 'new ' + judje_name + ' is compiled'
 
 if __name__ == '__main__':
     main()
