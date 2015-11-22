@@ -24,7 +24,6 @@ class config:
         if not os.system('make judje -s -i') == 0:
             print 'no makefile provided'
             if os.system('g++ -O2 -o test ' + config.cxx_t):
-                print 'specify appropriate makefile with target judje'
                 sys.exit(1)
             print 'compiled ' + config.cxx_t
 
@@ -99,7 +98,6 @@ def getData(dirname):
         sys.exit(0)
     return (tests, answers)
 
-
 class bcolors:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
@@ -161,12 +159,12 @@ def proceed_ans(q, instance_ans, reference, i):
         q.put(test_result(type.wa, i, out=instance_ans)) 
 
 def test_target(args):
-    target = args[0]
-    results = args[1] 
-    i = args[2]
-    test = args[3] 
-    answer = args[4]
-    try: timeout = args[5]
+    target = config.target()
+    results = args[0] 
+    i = args[1]
+    test = args[2] 
+    answer = args[3]
+    try: timeout = args[4]
     except: timeout = 1
     instance = Popen(target, stdin=PIPE, stdout=PIPE, bufsize=1)
     signal.signal(signal.SIGALRM, _handle_timeout) 
@@ -176,8 +174,7 @@ def test_target(args):
         proceed_ans(results, instance_ans, answer, i)
     except Exception as e: 
         results.put(test_result(type.tl, i)) 
-        try: instance.kill()
-        except: print e
+        instance.kill()
     finally: 
         signal.alarm(0)
 
@@ -213,9 +210,9 @@ def main():
         except: 
             print 'Index is out of bounce'
             sys.exit(1)
-
-    args = [(config.target(), \
-             q, \
+    
+    config.target(),
+    args = [(q, \
              tests.index(f) ,\
              open(f).read(), \
              open(answers[tests.index(f)]).read()) \
