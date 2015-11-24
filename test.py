@@ -12,7 +12,7 @@ from enum import Enum
 
 py_switches = ['py']
 c_switches = ['cpp', 'cc', 'hpp', 'h', 'hxx', 'cxx', 'c']
-judje_name = 'judje.cc'
+judge_name = 'judge.cc'
 
 class prj_type(Enum):
     c_type = 0
@@ -47,7 +47,8 @@ class config:
         if config.t == prj_type.py_type: 
             return [sys.executable, config.executable]
         else:
-            if config.compiled == False: config.compile()
+            if config.compiled == False: 
+                config.compile()
             return './' + config.executable
 
 def definePyMainFile(files):
@@ -58,7 +59,7 @@ def definePyMainFile(files):
         
 def defineCMainFile(files):
     for e in files:
-       if e == judje_name: continue
+       if e == judge_name: continue
        f = open(e)
        if re.search(' main\(', f.read()):
            return e
@@ -187,12 +188,15 @@ def test_target(args):
     finally: 
         signal.alarm(0)
 
+def countAnsOfType(res, t):
+    return len([r for r in res if r.t == t])
+
 def proceed_test_res(res):
     sets = []
     index = 0
     current = res[0]
     
-    judje.was = len([r for r in res if r.t == type.wa])
+    judje.was = countAnsOfType(res, type.wa)
     judje.oks = len([r for r in res if r.t == type.ok])
     judje.tls = len([r for r in res if r.t == type.tl])
 
@@ -221,14 +225,14 @@ def collect():
     except: 
         print 'unable to open main file'
         sys.exit(1)
-    j_f = open('judje.cc', 'w')
+    j_f = open(judge_name, 'w')
     proceedDependecies(main_f, j_f)
 
 def main():
 
-    if isfile(judje_name):
-        print 'deleting your old ' + judje_name
-        os.remove(judje_name)
+    if isfile(judge_name):
+        print 'deleting your old ' + judge_name
+        os.remove(judge_name)
 
     defineProjectType()
 
@@ -264,7 +268,7 @@ def main():
 
     if judje.overall() == judje.oks: 
         collect()
-        print 'new ' + judje_name + ' is compiled'
+        print 'new ' + judge_name + ' is compiled'
 
 if __name__ == '__main__':
     main()
