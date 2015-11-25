@@ -154,6 +154,7 @@ def getInstances(string):
         try: instances.append(float(obj))
         except Exception as e: 
             instances.append(obj)
+    return instances
 
 def proceed_ans(q, instance_ans, reference, i):
     if getInstances(instance_ans) == getInstances(reference): 
