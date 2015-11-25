@@ -18,38 +18,38 @@ class prj_type(Enum):
     c_type = 0
     py_type = 1
 
-class config:
+class Config:
 
-    @staticmethod
-    def compile():
+    def compile(self):
         if not os.system('make test -s -i') == 0:
             print 'no makefile provided'
-            if os.system('g++ -O2 -o test ' + config.cxx_mainfile):
+            if os.system('g++ -O2 -o test ' + self.cxx_mainfile):
                 sys.exit(1)
-            print 'compiled ' + config.cxx_mainfile
+            print 'compiled ' + self.cxx_mainfile
 
         if not 'test' in listdir('./'):
             print 'specify \'test\' output file in makefile\'s target judje'
             sys.exit(1)
 
-        config.executable = 'test'
-        config.compiled = True
+        self.executable = 'test'
+        self.compiled = True
 
     compiled = False
 
-    @staticmethod
-    def clean():
-        if config.compiled:
-            os.remove(config.executable)
+    def clean(self):
+        if self.compiled:
+            os.remove(self.executable)
 
-    @staticmethod
-    def target():
-        if config.t == prj_type.py_type: 
-            return [sys.executable, config.executable]
+    @property
+    def target(self):
+        if self.t == prj_type.py_type: 
+            return [sys.executable, self.executable]
         else:
-            if config.compiled == False: 
-                config.compile()
-            return './' + config.executable
+            if self.compiled == False: 
+                self.compile()
+            return './' + self.executable
+
+config = Config()
 
 def definePyMainFile(files):
     for e in files:
@@ -169,7 +169,7 @@ class Judjement:
 judje = Judjement()
 
 def test_target(args):
-    target = config.target()
+    target = config.target
     results = args[0] 
     i = args[1]
     test = args[2] 
@@ -248,7 +248,7 @@ def main():
             print 'Index is out of bounce'
             sys.exit(1)
     
-    config.target(),
+    config.target
     args = [(q, \
              tests.index(f) ,\
              open(f).read(), \
