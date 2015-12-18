@@ -35,6 +35,7 @@ class Config:
         self.compiled = True
 
     compiled = False
+    show = False
 
     def clean(self):
         if self.compiled:
@@ -157,9 +158,16 @@ def getInstances(string):
     return instances
 
 def proceed_ans(q, instance_ans, reference, i):
+    if config.show == True:
+        print '--------EXPECTED---------'
+        print reference
     if getInstances(instance_ans) == getInstances(reference): 
         q.put(test_result(type.ok, i)) 
     else: 
+        if config.show == True:
+            print '---------OUTPUT----------'
+            print instance_ans
+
         q.put(test_result(type.wa, i, out=instance_ans)) 
 
 class Judjement:
@@ -176,13 +184,18 @@ def test_target(args):
     test = args[2] 
     answer = args[3]
     try: timeout = args[4]
-    except: timeout = 1
+    except: timeout = 5
     instance = Popen(target, stdin=PIPE, stdout=PIPE, bufsize=1)
     signal.signal(signal.SIGALRM, _handle_timeout) 
     signal.alarm(timeout) 
     try: 
         instance_ans, instance_err = instance.communicate(test) 
+        if config.show == True:
+            print '----------TEST-----------'
+            print test
         proceed_ans(results, instance_ans, answer, i)
+        if config.show == True:
+            print '-------------------------'
     except Exception as e: 
         results.put(test_result(type.tl, i)) 
         instance.kill()
@@ -198,8 +211,8 @@ def proceed_test_res(res):
     current = res[0]
     
     judje.was = countAnsOfType(res, type.wa)
-    judje.oks = len([r for r in res if r.t == type.ok])
-    judje.tls = len([r for r in res if r.t == type.tl])
+    judje.oks = countAnsOfType(res, type.ok)
+    judje.tls = countAnsOfType(res, type.tl)
 
     for i in range(len(res)):
         if not res[i].t == current.t: 
@@ -231,10 +244,6 @@ def collect():
 
 def main():
 
-    if isfile(judge_name):
-        print 'deleting your old ' + judge_name
-        os.remove(judge_name)
-
     defineProjectType()
 
     tests, answers = getData('tests')
@@ -245,6 +254,7 @@ def main():
         try: 
             tests = [tests[int(sys.argv[2]) - 1]]
             answers = [answers[int(sys.argv[2]) - 1]]
+            config.show = True
         except: 
             print 'Index is out of bounce'
             sys.exit(1)
@@ -256,7 +266,7 @@ def main():
              open(answers[tests.index(f)]).read()) \
              for f in tests] 
 
-    p = Pool(len(tests))
+    p = Pool(100)
     p.map(test_target, args)
 
     res = [i for i in range(q.qsize())]
