@@ -1,5 +1,4 @@
 from subprocess import PIPE, Popen
-import StringIO
 from multiprocessing import Pool, Manager
 import signal
 from time import sleep
@@ -22,13 +21,13 @@ class Config:
 
     def compile(self):
         if not os.system('make test -s -i') == 0:
-            print 'no makefile provided'
+            print('no makefile provided')
             if os.system('g++ -O2 -o test ' + self.cxx_mainfile):
                 sys.exit(1)
-            print 'compiled ' + self.cxx_mainfile
+            print('compiled ' + self.cxx_mainfile)
 
         if not 'test' in listdir('./'):
-            print 'specify \'test\' output file in makefile\'s target judje'
+            print('specify \'test\' output file in makefile\'s target judje')
             sys.exit(1)
 
         self.executable = 'test'
@@ -79,10 +78,10 @@ def defineProjectType():
         elif e in c_switches:
             c.append(name)
     if len(c) > 0 and len(py) > 0:
-        print 'Can\'t determinate your project\'s language'
+        print('Can\'t determinate your project\'s language')
         sys.exit(1)
     if len(c) == 0 and len(py) == 0:
-        print 'Nothing to test'
+        print('Nothing to test')
         sys.exit(1)
     if len(py) > 0:
         config.t = prj_type.py_type
@@ -94,11 +93,11 @@ def defineProjectType():
 def getData(dirname):
     files = [join(dirname, f) for f in listdir(dirname) if isfile(join(dirname, f))]
     tests = [f for f in files if f.split('/')[-1][0] == 't']
-    tests = sorted(tests, cmp=numeric_compare)
+    tests = sorted(tests)
     answers = [f for f in files if f.split('/')[-1][0] == 'a']
     answers = sorted(answers, cmp=numeric_compare)
     if not len(answers) == len(tests):
-        print 'Hmm...Test directory is not okay'
+        print('Hmm...Test directory is not okay')
         sys.exit(0)
     return (tests, answers)
 
@@ -159,14 +158,14 @@ def getInstances(string):
 
 def proceed_ans(q, instance_ans, reference, i):
     if config.show == True:
-        print '--------EXPECTED---------'
-        print reference
+        print('--------EXPECTED---------')
+        print(reference)
     if getInstances(instance_ans) == getInstances(reference): 
         q.put(test_result(type.ok, i)) 
     else: 
         if config.show == True:
-            print '---------OUTPUT----------'
-            print instance_ans
+            print('---------OUTPUT----------')
+            print(instance_ans)
 
         q.put(test_result(type.wa, i, out=instance_ans)) 
 
@@ -191,11 +190,11 @@ def test_target(args):
     try: 
         instance_ans, instance_err = instance.communicate(test) 
         if config.show == True:
-            print '----------TEST-----------'
-            print test
+            print('----------TEST-----------')
+            print(test)
         proceed_ans(results, instance_ans, answer, i)
         if config.show == True:
-            print '-------------------------'
+            print('-------------------------')
     except Exception as e: 
         results.put(test_result(type.tl, i)) 
         instance.kill()
@@ -223,9 +222,9 @@ def proceed_test_res(res):
     for s in sets:
         print_colored(s[2].getDescription())
         if s[1] - s[0] == 0:
-            print ' Test #' + str(s[0] + 1)
+            print(' Test #' + str(s[0] + 1))
         else:
-            print ' Tests #' + str(s[0] + 1) + '..' + str(s[1] + 1)
+            print(' Tests #' + str(s[0] + 1) + '..' + str(s[1] + 1))
 
 def proceedDependecies(f, j_f):
     for line in f:
@@ -237,7 +236,7 @@ def proceedDependecies(f, j_f):
 def collect():
     try: main_f = open(config.cxx_mainfile)
     except: 
-        print 'unable to open main file'
+        print('unable to open main file')
         sys.exit(1)
     j_f = open(judge_name, 'w')
     proceedDependecies(main_f, j_f)
@@ -256,7 +255,7 @@ def main():
             answers = [answers[int(sys.argv[2]) - 1]]
             config.show = True
         except: 
-            print 'Index is out of bounce'
+            print('Index is out of bounce')
             sys.exit(1)
     
     config.target
@@ -279,7 +278,7 @@ def main():
 
     if judje.overall() == judje.oks: 
         collect()
-        print 'new ' + judge_name + ' is compiled'
+        print('new ' + judge_name + ' is compiled')
 
 if __name__ == '__main__':
     main()
